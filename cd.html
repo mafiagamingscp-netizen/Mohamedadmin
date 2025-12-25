@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X-CONTROL | لوحة التحكم</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        :root { --main: #00ff00; --bg: #111; }
+        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', Tahoma, sans-serif; padding: 20px; text-align: center; }
+        .admin-container { max-width: 600px; margin: auto; }
+        .card { background: #222; border: 1px solid var(--main); border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 0 10px rgba(0,255,0,0.2); }
+        h2 { color: var(--main); border-bottom: 1px solid #333; padding-bottom: 10px; }
+        input, select { width: 90%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid var(--main); color: var(--main); border-radius: 8px; outline: none; }
+        button { width: 95%; padding: 15px; background: var(--main); color: #000; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #00cc00; transform: scale(1.02); }
+        .status-msg { margin-top: 10px; font-weight: bold; color: yellow; }
+    </style>
+</head>
+<body>
+
+<div class="admin-container">
+    <h1>🚀 لوحة إدارة الاشتراكات</h1>
+
+    <div class="card">
+        <h2>✅ تفعيل اشتراك جديد</h2>
+        <p>ضع ID المشترك ليتم فتح الأدوات له فوراً</p>
+        <input type="text" id="targetID" placeholder="أدخل ID المشترك (مثال: ID-1234)">
+        <button onclick="updateUserStatus('active')">تفعيل الاشتراك الآن</button>
+        <button onclick="updateUserStatus('pending')" style="background: red; color: white; margin-top: 10px;">إلغاء التفعيل</button>
+    </div>
+
+    <div class="card">
+        <h2>📤 إرسال ميديا (صور/فيديو)</h2>
+        <input type="text" id="mediaTargetID" placeholder="ID المشترك">
+        <select id="mediaType">
+            <option value="image">إرسال صورة</option>
+            <option value="video">إرسال فيديو</option>
+        </select>
+        <input type="text" id="mediaUrl" placeholder="رابط (URL) الصورة أو الفيديو">
+        <button onclick="sendMediaToUser()">إرسال للمشترك ✅</button>
+    </div>
+
+    <div id="status" class="status-msg"></div>
+</div>
+
+<script>
+    // تكوين Firebase الخاص بك
+    const firebaseConfig = {
+        databaseURL: "https://YOUR-PROJECT-ID.firebaseio.com" // ضع رابط الداتابيز الخاص بك هنا
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const statusDiv = document.getElementById('status');
+
+    // وظيفة تفعيل أو إلغاء تفعيل المستخدم
+    function updateUserStatus(newStatus) {
+        const id = document.getElementById('targetID').value;
+        if (!id) { alert("يرجى إدخال الـ ID"); return; }
+
+        db.ref('users/' + id).update({
+            status: newStatus
+        }).then(() => {
+            statusDiv.innerText = `تم تحديث حالة ${id} إلى: ${newStatus}`;
+            // إرسال إشعار تليجرام لك للتأكيد
+            fetch(`https://api.telegram.org/bot8308420533:AAEC3g7VXj6eiPF1GyDqSdvJfHzFOClkZfo/sendMessage?chat_id=7549050561&text=${encodeURIComponent("🛠️ تم تحديث حالة " + id + " إلى " + newStatus)}`);
+        }).catch(err => {
+            alert("خطأ: " + err.message);
+        });
+    }
+
+    // وظيفة إرسال ميديا للمشترك
+    function sendMediaToUser() {
+        const id = document.getElementById('mediaTargetID').value;
+        const type = document.getElementById('mediaType').value;
+        const url = document.getElementById('mediaUrl').value;
+
+        if (!id || !url) { alert("أكمل البيانات أولاً"); return; }
+
+        db.ref('media/' + id).push({
+            type: type,
+            url: url,
+            time: Date.now()
+        }).then(() => {
+            statusDiv.innerText = `تم إرسال ${type} بنجاح للـ ID: ${id}`;
+            document.getElementById('mediaUrl').value = ""; // تفريغ الخانة بعد الإرسال
+        });
+    }
+</script>
+
+</body>
+</html>
